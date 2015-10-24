@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace IsraelTransverseMercator
 {
+    /// <summary>
+    /// This class is the main class used to convert between positioning systems.
+    /// </summary>
     public class Converter
     {
         private const string WGS84 = "WGS84";
@@ -74,6 +77,8 @@ namespace IsraelTransverseMercator
         /// <summary>
         /// Israel New Grid (ITM) to WGS84 conversion
         /// </summary>
+        /// <param name="northEast">North East Coordinates in ITM grid</param>
+        /// <returns>Latitide and Longitude in WGS84</returns>
         public LatLon ItmToWgs84(NorthEast northEast)
         {
             // 1. Local Grid (ITM) -> GRS80
@@ -90,8 +95,8 @@ namespace IsraelTransverseMercator
         /// <summary>
         /// WGS84 to Israel New Grid (ITM) conversion
         /// </summary>
-        /// <param name="latLon"></param>
-        /// <returns></returns>
+        /// <param name="latLon">Latitide and Longitude in WGS84</param>
+        /// <returns>North East Coordinates in ITM grid</returns>
         public NorthEast Wgs84ToItm(LatLon latLon)
         {
             latLon.ToRadians();
@@ -106,8 +111,8 @@ namespace IsraelTransverseMercator
         /// <summary>
         /// Israel Old Grid (ICS) to WGS84 conversion
         /// </summary>
-        /// <param name="northEast"></param>
-        /// <returns></returns>
+        /// <param name="northEast">North East Coordinates in ICS grid</param>
+        /// <returns>Latitide and Longitude in WGS84</returns>
         public LatLon IcsToWgs84(NorthEast northEast)
         {
             // 1. Local Grid (ICS) -> Clark_1880_modified
@@ -124,8 +129,8 @@ namespace IsraelTransverseMercator
         /// <summary>
         /// WGS84 to Israel Old Grid (ICS) conversion
         /// </summary>
-        /// <param name="latLon"></param>
-        /// <returns></returns>
+        /// <param name="latLon">Latitide and Longitude in WGS84</param>
+        /// <returns>North East Coordinates in ICS grid</returns>
         public NorthEast Wgs84ToIcs(LatLon latLon)
         {
             latLon.ToRadians();
