@@ -1,4 +1,75 @@
-﻿using System;
+﻿//*****************************************************************************************************
+//*                                                                                                   *
+//*  This code is free software; you can redistribute it and/or modify it at your will.               *
+//*  It is our hope however that if you improve it in any way you will find a way to share it too.     *
+//*                                                                                                   *
+//*  Original C++ version by jgray77@gmail.com	3/2010								                  *
+//*  Ported C# version by mikisiton2@gmail.com	5/2012								                  *
+//*  Refactored and created a nuget package    10/2015
+//*                                                                                                   *
+//*  This program is distributed AS-IS in the hope that it will be useful, but WITHOUT ANY WARRANTY;  *
+//*  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.        * 
+//*                                                                                                   *
+//*****************************************************************************************************
+//
+//
+//===================================================================================================
+//	Israel Local Grids <==> WGS84 conversions
+//===================================================================================================
+//
+// The Israel New Grid (ITM) is a Transverse Mercator projection of the GRS80 ellipsoid.
+// The Israel Old Grid (ICS) is a Cassini-Soldner projection of the modified Clark 1880 ellipsoid.
+//
+// To convert from a local grid to WGS84 you first do a "UTM to Lat/Lon" conversion using the 
+// known formulas but with the local grid data (Central Meridian, Scale Factor and False 
+// Easting and Northing). This results in Lat/Long in the local ellipsoid coordinate system.
+// Afterwards you do a Molodensky transformation from this ellipsoid to WGS84.
+//
+// To convert from WGS84 to a local grid you first do a Molodensky transformation from WGS84
+// to the local ellipsoid, after which you do a Lat/Lon to UTM conversion, again with the data of
+// the local grid instead of the UTM data.
+//
+// The UTM to Lat/Lon and Lat/Lon to UTM conversion formulas were taken as-is from the
+// excellent article by Prof.Steven Dutch of the University of Wisconsin at Green Bay:
+//		http://www.uwgb.edu/dutchs/UsefulData/UTMFormulas.htm
+//
+// The [abridged] Molodensky transformations were taken from
+//		http://home.hiwaay.net/~taylorc/bookshelf/math-science/geodesy/datum/transform/molodensky/
+// and can be found in many sources on the net.
+// 
+// Additional sources:
+// ===================
+// 1. dX,dY,dZ values:  http://www.geo.hunter.cuny.edu/gis/docs/geographic_transformations.pdf
+//
+// 2. ITM data:  http://www.mapi.gov.il/geodesy/itm_ftp.txt
+//    for the meridional arc false northing, the value is given at
+//    http://www.mapi.gov.il/reg_inst/dir2b.doc	
+//    (this doc also gives a different formula for Lat/lon -> ITM, but not the reverse)
+//
+// 3. ICS data:  http://www.mapi.gov.il/geodesy/ics_ftp.txt
+//    for the meridional arc false northing, the value is given at several places as the 
+//    correction value for Garmin GPS sets, the origin is unknown.
+//    e.g. http://www.idobartana.com/etrexkb/etrexisr.htm
+//	
+// Notes: 
+// ======
+// 1. The conversions between ICS and ITM are 
+//			ITM Lat = ICS Lat - 500000
+//			ITM Lon = ICS Lon + 50000
+//	  e.g. ITM 678000,230000 <--> ICS 1178000 180000
+//
+//	  Since the formulas for ITM->WGS84 and ICS->WGS84 are different, the results will differ.
+//    For the above coordinates we get the following results (WGS84)
+//		ITM->WGS84 32.11'43.945" 35.18'58.782"
+//		ICS->WGS84 32.11'43.873" 35.18'58.200"
+//      Difference    ~3m            ~15m
+//
+// 2. If you have, or have seen, formulas that contain the term Sin(1"), I recommend you read 
+//    Prof.Dutch's enlightening explanation about it in his link above.
+//
+//===================================================================================================
+
+using System;
 using System.Collections.Generic;
 
 namespace IsraelTransverseMercator
