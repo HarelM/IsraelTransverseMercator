@@ -88,6 +88,9 @@ namespace IsraelTransverseMercator
         private Dictionary<string, Datum> Datums;
         private Dictionary<string, Grid> Grids;
 
+        /// <summary>
+        /// Constructs the nessesary members to be able to convert coordinates
+        /// </summary>
         public CoordinatesConverter()
         {
             Datums = new Dictionary<string, Datum>();
