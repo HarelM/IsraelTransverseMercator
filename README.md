@@ -13,7 +13,7 @@ In order to use this converter please follow these steps:
     Using IsraelTransverseMercator;
 
     ...
-    var converter = new Converter();
+    ICoordinatesConverter converter = new CoordinatesConverter();
 
     var northEast = converter.Wgs84ToItm(new LatLon { Latitude = 31.99702701, Longitude = 34.9986170 });
     var northEast = converter.Wgs84ToIcs(new LatLon { Latitude = 31.99702701, Longitude = 34.9986170 });

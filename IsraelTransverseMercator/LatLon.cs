@@ -1,21 +1,19 @@
 ﻿using System;
 namespace IsraelTransverseMercator
 {
+    /// <summary>
+    /// This class is used to hold coordinates in Wgs84
+    /// </summary>
     public class LatLon
     {
+        /// <summary>
+        /// Latitude - in degrees
+        /// </summary>
         public double Latitude { get; set; }
+
+        /// <summary>
+        /// Longitude - in degrees
+        /// </summary>
         public double Longitude { get; set; }
-
-        public void ToDegrees()
-        {
-            Latitude *= 180 / Math.PI;
-            Longitude *= 180 / Math.PI;
-        }
-
-        public void ToRadians()
-        {
-            Latitude *= Math.PI / 180;
-            Longitude *= Math.PI / 180;
-        }
     }
 }

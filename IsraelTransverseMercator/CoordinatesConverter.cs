@@ -77,7 +77,7 @@ namespace IsraelTransverseMercator
     /// <summary>
     /// This class is the main class used to convert between positioning systems.
     /// </summary>
-    public class Converter
+    public class CoordinatesConverter : ICoordinatesConverter
     {
         private const string WGS84 = "WGS84";
         private const string GRS80 = "GRS80";
@@ -88,7 +88,7 @@ namespace IsraelTransverseMercator
         private Dictionary<string, Datum> Datums;
         private Dictionary<string, Grid> Grids;
 
-        public Converter()
+        public CoordinatesConverter()
         {
             Datums = new Dictionary<string, Datum>();
             Grids = new Dictionary<string, Grid>();
@@ -159,8 +159,7 @@ namespace IsraelTransverseMercator
             var latLon84 = Molodensky(latLon80, GRS80, WGS84);
 
             // final results
-            latLon84.ToDegrees();
-            return latLon84;
+            return ToDegrees(latLon84);
         }
 
         /// <summary>
@@ -170,10 +169,8 @@ namespace IsraelTransverseMercator
         /// <returns>North East Coordinates in ITM grid</returns>
         public NorthEast Wgs84ToItm(LatLon latLon)
         {
-            latLon.ToRadians();
-
             // 1. Molodensky WGS84 -> GRS80
-            var latLon80 = Molodensky(latLon, WGS84, GRS80);
+            var latLon80 = Molodensky(ToRadians(latLon), WGS84, GRS80);
 
             // 2. Lat/Lon (GRS80) -> Local Grid (ITM)
             return LatLon2Grid(latLon80, GRS80, ITM);
@@ -193,8 +190,7 @@ namespace IsraelTransverseMercator
             var latLon84 = Molodensky(latLon80, CLARK80M, WGS84);
 
             // final results
-            latLon84.ToDegrees();
-            return latLon84;
+            return ToDegrees(latLon84);
         }
 
         /// <summary>
@@ -204,10 +200,8 @@ namespace IsraelTransverseMercator
         /// <returns>North East Coordinates in ICS grid</returns>
         public NorthEast Wgs84ToIcs(LatLon latLon)
         {
-            latLon.ToRadians();
-
             // 1. Molodensky WGS84 -> Clark_1880_modified
-            var latLon80 = Molodensky(latLon, WGS84, CLARK80M);
+            var latLon80 = Molodensky(ToRadians(latLon), WGS84, CLARK80M);
 
             // 2. Lat/Lon (Clark_1880_modified) -> Local Grid (ICS)
             return LatLon2Grid(latLon80, CLARK80M, ICS);
@@ -388,6 +382,34 @@ namespace IsraelTransverseMercator
             {
                 Latitude = input.Latitude + dlat,
                 Longitude = input.Longitude + dlon
+            };
+        }
+
+        /// <summary>
+        /// Used to convert latlon from radians to degrees
+        /// <param name="latLon">Latitude and Longidute object in radians</param>
+        /// <returns>Latitude and Longidute object in degrees</returns>
+        /// </summary>
+        private LatLon ToDegrees(LatLon latLon)
+        {
+            return new LatLon
+            {
+                Latitude = latLon.Latitude * 180 / Math.PI,
+                Longitude = latLon.Longitude * 180 / Math.PI,
+            };
+        }
+
+        /// <summary>
+        /// Used to convert latlon from degrees to radians
+        /// </summary>
+        /// <param name="latLon">Latitude and Longidute object in degrees</param>
+        /// <returns>Latitude and Longidute object in radians</returns>
+        private LatLon ToRadians(LatLon latLon)
+        {
+            return new LatLon
+            {
+                Latitude = latLon.Latitude * Math.PI / 180,
+                Longitude = latLon.Longitude * Math.PI / 180,
             };
         }
     }

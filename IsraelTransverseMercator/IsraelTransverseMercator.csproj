@@ -37,9 +37,10 @@
     <!-- A reference to the entire .NET Framework is automatically included -->
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Converter.cs" />
+    <Compile Include="CoordinatesConverter.cs" />
     <Compile Include="Datum.cs" />
     <Compile Include="Grid.cs" />
+    <Compile Include="ICoordinatesConverter.cs" />
     <Compile Include="LatLon.cs" />
     <Compile Include="NorthEast.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
