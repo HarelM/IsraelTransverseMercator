@@ -6,6 +6,7 @@
 //*  Original C++ version by jgray77@gmail.com	3/2010								                  *
 //*  Ported C# version by mikisiton2@gmail.com	5/2012								                  *
 //*  Refactored and created a nuget package    10/2015
+//*  Removed ICS, added GeoAPI, .Net Core      03/2017
 //*                                                                                                   *
 //*  This program is distributed AS-IS in the hope that it will be useful, but WITHOUT ANY WARRANTY;  *
 //*  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.        * 
@@ -18,7 +19,6 @@
 //===================================================================================================
 //
 // The Israel New Grid (ITM) is a Transverse Mercator projection of the GRS80 ellipsoid.
-// The Israel Old Grid (ICS) is a Cassini-Soldner projection of the modified Clark 1880 ellipsoid.
 //
 // To convert from a local grid to WGS84 you first do a "UTM to Lat/Lon" conversion using the 
 // known formulas but with the local grid data (Central Meridian, Scale Factor and False 
@@ -71,179 +71,119 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using GeoAPI.CoordinateSystems.Transformations;
+using GeoAPI.Geometries;
 
 namespace IsraelTransverseMercator
 {
     /// <summary>
     /// This class is the main class used to convert between positioning systems.
     /// </summary>
-    public class CoordinatesConverter : ICoordinatesConverter
+    public class ItmWgs84MathTransfrom : IMathTransform
     {
-        private const string WGS84 = "WGS84";
-        private const string GRS80 = "GRS80";
-        private const string CLARK80M = "CLARK80M";
-        private const string ICS = "ICS";
-        private const string ITM = "ITM";
+        private readonly bool _inversed;
 
-        private Dictionary<string, Datum> Datums;
-        private Dictionary<string, Grid> Grids;
-
-        /// <summary>
-        /// Constructs the nessesary members to be able to convert coordinates
-        /// </summary>
-        public CoordinatesConverter()
+        public ItmWgs84MathTransfrom(bool inversed = false)
         {
-            Datums = new Dictionary<string, Datum>();
-            Grids = new Dictionary<string, Grid>();
+            _inversed = inversed;
+        }
 
-            Datums.Add(WGS84, new Datum
+        public bool Identity()
+        {
+            throw new NotImplementedException();
+        }
+
+        public double[,] Derivative(double[] point)
+        {
+            throw new NotImplementedException();
+        }
+
+        public List<double> GetCodomainConvexHull(List<double> points)
+        {
+            throw new NotImplementedException();
+        }
+
+        public DomainFlags GetDomainFlags(List<double> points)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IMathTransform Inverse()
+        {
+            return new ItmWgs84MathTransfrom(!_inversed);
+        }
+
+        public double[] Transform(double[] point)
+        {
+            var cooridnate = Transform(new Coordinate(point.First(), point.Last()));
+            return new[] {cooridnate.X, cooridnate.Y};
+        }
+
+        public ICoordinate Transform(ICoordinate coordinate)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Coordinate Transform(Coordinate coordinate)
+        {
+            if (_inversed)
             {
-                EquatorialEarthRadius = 6378137.0,
-                PolarEarthRadius = 6356752.3142,
-                DeltaX = 0,
-                DeltaY = 0,
-                DeltaZ = 0,
-            });
+                // 1. Molodensky WGS84 -> GRS80
+                var latLon80 = Molodensky(ToRadians(coordinate), Datum.WGS84, Datum.GRS80);
 
-            Datums.Add(GRS80, new Datum
+                // 2. Lat/Lon (GRS80) -> Local Grid (ITM)
+                return LatLon2Grid(latLon80, Datum.GRS80, Grid.ITM);
+            }
+            else
             {
-                EquatorialEarthRadius = 6378137.0,
-                PolarEarthRadius = 6356752.3141,
-                // deltas to WGS84
-                DeltaX = -48,
-                DeltaY = 55,
-                DeltaZ = 52
-            });
+                // 1. Local Grid (ITM) -> GRS80
+                var latLon80 = Grid2LatLon(coordinate, Grid.ITM, Datum.GRS80);
 
-            // Clark 1880 Modified data
-            Datums.Add(CLARK80M, new Datum
-            {
-                EquatorialEarthRadius = 6378300.789,
-                PolarEarthRadius = 6356566.4116309,
-                // deltas to WGS84
-                DeltaX = -235,
-                DeltaY = -85,
-                DeltaZ = 264,
-            });
+                // 2. Molodensky GRS80->WGS84
+                var latLon84 = Molodensky(latLon80, Datum.GRS80, Datum.WGS84);
 
-            Grids.Add(ICS, new Grid
-            {
-                CentralLongitude = Grid.DegreesStringToRadians("35°12'43.490\""),
-                CentralLatitude = Grid.DegreesStringToRadians("31°44'02.749\""),
-                ScaleFactor = 1.0,
-                FalseEasting = 170251.555,
-                FalseNorthing = 2385259.0
-            });
-
-            // ITM data
-            Grids.Add(ITM, new Grid
-            {
-                CentralLongitude = Grid.DegreesStringToRadians("35°12'16.261\""),
-                CentralLatitude = Grid.DegreesStringToRadians("31°44'03.817\""),
-                ScaleFactor = 1.0000067,
-                FalseEasting = 219529.584,
-                // MAPI says the false northing is 626907.390, and in another place
-                // that the meridional arc at the central latitude is 3512424.3388
-                FalseNorthing = 2885516.9488
-            });
+                // final results
+                return ToDegrees(latLon84);
+            }
         }
 
-        /// <summary>
-        /// Israel New Grid (ITM) to WGS84 conversion
-        /// </summary>
-        /// <param name="northEast">North East Coordinates in ITM grid</param>
-        /// <returns>Latitide and Longitude in WGS84</returns>
-        public LatLon ItmToWgs84(NorthEast northEast)
+        public IList<double[]> TransformList(IList<double[]> points)
         {
-            // 1. Local Grid (ITM) -> GRS80
-            var latLon80 = Grid2LatLon(northEast, ITM, GRS80);
-
-            // 2. Molodensky GRS80->WGS84
-            var latLon84 = Molodensky(latLon80, GRS80, WGS84);
-
-            // final results
-            return ToDegrees(latLon84);
+            return points.Select(Transform).ToList();
         }
 
-        /// <summary>
-        /// WGS84 to Israel New Grid (ITM) conversion
-        /// </summary>
-        /// <param name="latLon">Latitide and Longitude in WGS84</param>
-        /// <returns>North East Coordinates in ITM grid</returns>
-        public NorthEast Wgs84ToItm(LatLon latLon)
+        public IList<Coordinate> TransformList(IList<Coordinate> points)
         {
-            // 1. Molodensky WGS84 -> GRS80
-            var latLon80 = Molodensky(ToRadians(latLon), WGS84, GRS80);
-
-            // 2. Lat/Lon (GRS80) -> Local Grid (ITM)
-            return LatLon2Grid(latLon80, GRS80, ITM);
+            return points.Select(Transform).ToList();
         }
 
-        /// <summary>
-        /// Israel Old Grid (ICS) to WGS84 conversion
-        /// </summary>
-        /// <param name="northEast">North East Coordinates in ICS grid</param>
-        /// <returns>Latitide and Longitude in WGS84</returns>
-        public LatLon IcsToWgs84(NorthEast northEast)
+        public void Invert()
         {
-            // 1. Local Grid (ICS) -> Clark_1880_modified
-            var latLon80 = Grid2LatLon(northEast, ICS, CLARK80M);
-
-            // 2. Molodensky Clark_1880_modified -> WGS84
-            var latLon84 = Molodensky(latLon80, CLARK80M, WGS84);
-
-            // final results
-            return ToDegrees(latLon84);
+            throw new NotImplementedException();
         }
 
-        /// <summary>
-        /// WGS84 to Israel Old Grid (ICS) conversion
-        /// </summary>
-        /// <param name="latLon">Latitide and Longitude in WGS84</param>
-        /// <returns>North East Coordinates in ICS grid</returns>
-        public NorthEast Wgs84ToIcs(LatLon latLon)
+        public ICoordinateSequence Transform(ICoordinateSequence coordinateSequence)
         {
-            // 1. Molodensky WGS84 -> Clark_1880_modified
-            var latLon80 = Molodensky(ToRadians(latLon), WGS84, CLARK80M);
-
-            // 2. Lat/Lon (Clark_1880_modified) -> Local Grid (ICS)
-            return LatLon2Grid(latLon80, CLARK80M, ICS);
+            throw new NotImplementedException();
         }
 
-        private static double sin2(double x)
-        {
-            return Math.Sin(x) * Math.Sin(x);
-        }
-        private static double cos2(double x)
-        {
-            return Math.Cos(x) * Math.Cos(x);
-        }
-        private static double tan2(double x)
-        {
-            return Math.Tan(x) * Math.Tan(x);
-        }
-        private static double tan4(double x)
-        {
-            return tan2(x) * tan2(x);
-        }
+        public int DimSource { get; }
+        public int DimTarget { get; }
+        public string WKT { get; }
+        public string XML { get; }
 
-        /// <summary>
-        /// Local Grid to Lat/Lon conversion
-        /// </summary>
-        /// <param name="northEast"></param>
-        /// <param name="from"></param>
-        /// <param name="to"></param>
-        /// <returns></returns>
-        private LatLon Grid2LatLon(NorthEast northEast, string from, string to)
-        {
-            double y = northEast.North + Grids[from].FalseNorthing;
-            double x = northEast.East - Grids[from].FalseEasting;
-            double M = y / Grids[from].ScaleFactor;
 
-            double a = Datums[to].EquatorialEarthRadius;
-            double b = Datums[to].PolarEarthRadius;
-            double e = Datums[to].Eccentricity;
-            double esq = Datums[to].EccentricitySquared;
+        private Coordinate Grid2LatLon(Coordinate northEast, Grid from, Datum to)
+        {
+            double y = northEast.Y + from.FalseNorthing;
+            double x = northEast.X - from.FalseEasting;
+            double M = y / from.ScaleFactor;
+
+            double a = to.EquatorialEarthRadius;
+            double b = to.PolarEarthRadius;
+            double e = to.Eccentricity;
+            double esq = to.EccentricitySquared;
 
             double mu = M / (a * (1 - e * e / 4 - 3 * Math.Pow(e, 4) / 64 - 5 * Math.Pow(e, 6) / 256));
 
@@ -266,7 +206,7 @@ namespace IsraelTransverseMercator
             double T1 = tanfp * tanfp;
             double R1 = a * (1 - e * e) / Math.Pow(1 - (e * sinfp) * (e * sinfp), 1.5);
             double N1 = a / Math.Sqrt(1 - (e * sinfp) * (e * sinfp));
-            double D = x / (N1 * Grids[from].ScaleFactor);
+            double D = x / (N1 * from.ScaleFactor);
 
             double Q1 = N1 * tanfp / R1;
             double Q2 = D * D / 2;
@@ -276,10 +216,10 @@ namespace IsraelTransverseMercator
             double Q6 = (1 + 2 * T1 + C1) * (D * D * D) / 6;
             double Q7 = (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * eg2 * eg2 + 24 * T1 * T1) * (D * D * D * D * D) / 120;
             // result lon
-            return new LatLon
+            return new Coordinate
             {
-                Latitude = fp - Q1 * (Q2 - Q3 + Q4),
-                Longitude = Grids[from].CentralLongitude + (Q5 - Q6 + Q7) / cosfp
+                Y = fp - Q1 * (Q2 - Q3 + Q4),
+                X = from.CentralLongitude + (Q5 - Q6 + Q7) / cosfp
             };
         }
 
@@ -290,14 +230,14 @@ namespace IsraelTransverseMercator
         /// <param name="from"></param>
         /// <param name="to"></param>
         /// <returns></returns>
-        private NorthEast LatLon2Grid(LatLon latLon, string from, string to)
+        private Coordinate LatLon2Grid(Coordinate latLon, Datum from, Grid to)
         {
             // Datum data for Lat/Lon to TM conversion
-            double a = Datums[from].EquatorialEarthRadius;
-            double e = Datums[from].Eccentricity; 	// sqrt(esq);
-            double b = Datums[from].PolarEarthRadius;
-            double lat = latLon.Latitude;
-            double lon = latLon.Longitude;
+            double a = from.EquatorialEarthRadius;
+            double e = from.Eccentricity; 	// sqrt(esq);
+            double b = from.PolarEarthRadius;
+            double lat = latLon.Y;
+            double lon = latLon.X;
             double slat1 = Math.Sin(lat);
             double clat1 = Math.Cos(lat);
             double clat1sq = clat1 * clat1;
@@ -315,26 +255,26 @@ namespace IsraelTransverseMercator
             double M = a * (l1 * lat - l2 * Math.Sin(2 * lat) + l3 * Math.Sin(4 * lat) - l4 * Math.Sin(6 * lat));
             //double rho = a*(1-e2) / pow((1-(e*slat1)*(e*slat1)),1.5);
             double nu = a / Math.Sqrt(1 - (e * slat1) * (e * slat1));
-            double p = lon - Grids[to].CentralLongitude;
-            double k0 = Grids[to].ScaleFactor;
+            double p = lon - to.CentralLongitude;
+            double k0 = to.ScaleFactor;
             // y = northing = K1 + K2p2 + K3p4, where
             double K1 = M * k0;
             double K2 = k0 * nu * slat1 * clat1 / 2;
             double K3 = (k0 * nu * slat1 * clat1 * clat1sq / 24) * (5 - tanlat1sq + 9 * eg2 * clat1sq + 4 * eg2 * eg2 * clat1sq * clat1sq);
             // ING north
-            double Y = K1 + K2 * p * p + K3 * p * p * p * p - Grids[to].FalseNorthing;
+            double Y = K1 + K2 * p * p + K3 * p * p * p * p - to.FalseNorthing;
 
             // x = easting = K4p + K5p3, where
             double K4 = k0 * nu * clat1;
             double K5 = (k0 * nu * clat1 * clat1sq / 6) * (1 - tanlat1sq + eg2 * clat1 * clat1);
             // ING east
-            double X = K4 * p + K5 * p * p * p + Grids[to].FalseEasting;
+            double X = K4 * p + K5 * p * p * p + to.FalseEasting;
 
             // final rounded results
-            return new NorthEast
+            return new Coordinate
             {
-                North = (int)(Y + 0.5),
-                East = (int)(X + 0.5),
+                Y = Y,
+                X = X,
             };
         }
 
@@ -345,17 +285,17 @@ namespace IsraelTransverseMercator
         /// <param name="from"></param>
         /// <param name="to"></param>
         /// <returns></returns>
-        private LatLon Molodensky(LatLon input, string from, string to)
+        private Coordinate Molodensky(Coordinate input, Datum from, Datum to)
         {
             // from->WGS84 - to->WGS84 = from->WGS84 + WGS84->to = from->to
-            double dX = Datums[from].DeltaX - Datums[to].DeltaX;
-            double dY = Datums[from].DeltaY - Datums[to].DeltaY;
-            double dZ = Datums[from].DeltaZ - Datums[to].DeltaZ;
+            double dX = from.DeltaX - to.DeltaX;
+            double dY = from.DeltaY - to.DeltaY;
+            double dZ = from.DeltaZ - to.DeltaZ;
 
-            double slat = Math.Sin(input.Latitude);
-            double clat = Math.Cos(input.Latitude);
-            double slon = Math.Sin(input.Longitude);
-            double clon = Math.Cos(input.Longitude);
+            double slat = Math.Sin(input.Y);
+            double clat = Math.Cos(input.Y);
+            double slon = Math.Sin(input.X);
+            double clon = Math.Cos(input.X);
             double ssqlat = slat * slat;
 
             //dlat = ((-dx * slat * clon - dy * slat * slon + dz * clat)
@@ -363,11 +303,11 @@ namespace IsraelTransverseMercator
             //        + (df * (rm * adb + rn / adb )* slat * clat))
             //       / (rm + from.h); 
 
-            double from_f = Datums[from].Flatenning;
-            double df = Datums[to].Flatenning - from_f;
-            double from_a = Datums[from].EquatorialEarthRadius;
-            double da = Datums[to].EquatorialEarthRadius - from_a;
-            double from_esq = Datums[from].EccentricitySquared;
+            double from_f = from.Flatenning;
+            double df = to.Flatenning - from_f;
+            double from_a = from.EquatorialEarthRadius;
+            double da = to.EquatorialEarthRadius - from_a;
+            double from_esq = from.EccentricitySquared;
             double adb = 1.0 / (1.0 - from_f);
             double rn = from_a / Math.Sqrt(1 - from_esq * ssqlat);
             double rm = from_a * (1 - from_esq) / Math.Pow((1 - from_esq * ssqlat), 1.5);
@@ -381,10 +321,10 @@ namespace IsraelTransverseMercator
             double dlon = (-dX * slon + dY * clon) / ((rn + from_h) * clat);
 
             // result lat (radians)
-            return new LatLon
+            return new Coordinate
             {
-                Latitude = input.Latitude + dlat,
-                Longitude = input.Longitude + dlon
+                Y = input.Y + dlat,
+                X = input.X + dlon
             };
         }
 
@@ -393,12 +333,12 @@ namespace IsraelTransverseMercator
         /// <param name="latLon">Latitude and Longidute object in radians</param>
         /// <returns>Latitude and Longidute object in degrees</returns>
         /// </summary>
-        private LatLon ToDegrees(LatLon latLon)
+        private Coordinate ToDegrees(Coordinate latLon)
         {
-            return new LatLon
+            return new Coordinate
             {
-                Latitude = latLon.Latitude * 180 / Math.PI,
-                Longitude = latLon.Longitude * 180 / Math.PI,
+                X = latLon.X * 180 / Math.PI,
+                Y = latLon.Y * 180 / Math.PI,
             };
         }
 
@@ -407,12 +347,12 @@ namespace IsraelTransverseMercator
         /// </summary>
         /// <param name="latLon">Latitude and Longidute object in degrees</param>
         /// <returns>Latitude and Longidute object in radians</returns>
-        private LatLon ToRadians(LatLon latLon)
+        private Coordinate ToRadians(Coordinate latLon)
         {
-            return new LatLon
+            return new Coordinate
             {
-                Latitude = latLon.Latitude * Math.PI / 180,
-                Longitude = latLon.Longitude * Math.PI / 180,
+                X = latLon.X * Math.PI / 180,
+                Y = latLon.Y * Math.PI / 180,
             };
         }
     }

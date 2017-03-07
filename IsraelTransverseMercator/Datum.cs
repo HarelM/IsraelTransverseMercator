@@ -36,5 +36,24 @@ namespace IsraelTransverseMercator
         /// Delat Z to WGS84
         /// </summary>
         public double DeltaZ { get; set; }
+
+        public static Datum WGS84 = new Datum
+        {
+            EquatorialEarthRadius = 6378137.0,
+            PolarEarthRadius = 6356752.3142,
+            DeltaX = 0,
+            DeltaY = 0,
+            DeltaZ = 0,
+        };
+
+        public static Datum GRS80 = new Datum
+        {
+            EquatorialEarthRadius = 6378137.0,
+            PolarEarthRadius = 6356752.3141,
+            // deltas to WGS84
+            DeltaX = -48,
+            DeltaY = 55,
+            DeltaZ = 52
+        };
     }
 }

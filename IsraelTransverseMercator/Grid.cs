@@ -43,5 +43,16 @@ namespace IsraelTransverseMercator
             double seconds = double.Parse(splitted[2]);
             return (degrees + (minutes / 60) + (seconds / 3600.0)) / 180.0 * Math.PI;
         }
+
+        public static Grid ITM = new Grid
+        {
+            CentralLongitude = DegreesStringToRadians("35°12'16.261\""),
+            CentralLatitude = DegreesStringToRadians("31°44'03.817\""),
+            ScaleFactor = 1.0000067,
+            FalseEasting = 219529.584,
+            // MAPI says the false northing is 626907.390, and in another place
+            // that the meridional arc at the central latitude is 3512424.3388
+            FalseNorthing = 2885516.9488
+        };
     };
 }
