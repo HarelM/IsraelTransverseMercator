@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>IsraelTransverseMercator</id>
+    <version>2.2</version>
+    <title>Israel Transverse Mercator</title>
+    <authors>Harel Mazor</authors>
+    <owners>Harel Mazor</owners>
+    <licenseUrl>https://github.com/HarelM/IsraelTransverseMercator/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/HarelM/IsraelTransverseMercator</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$description$</description>
+    <releaseNotes>Migrated to GoeAPI interface.</releaseNotes>
+    <copyright>Copyright 2017</copyright>
+    <tags>ITM UTM Geo WGS84</tags>
+	<dependencies>
+	
+	</dependencies>
+  </metadata>
+  <files>
+	
+  </files>
+</package>
