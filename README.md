@@ -4,30 +4,29 @@ Israel Transverse Mercator - Nuget package.
 Please note that this package will no longer be maintained as there is a better way to achieve the [relevant results](https://en.wikipedia.org/wiki/Israeli_Transverse_Mercator) using the following code and [Proj4NetGeoAPI](https://www.nuget.org/packages/ProjNET4GeoAPI) NuGet Package:
 
 ```
-var coordinateTransformFactory = new CoordinateTransformationFactory();
 var coordinateSystemFactory = new CoordinateSystemFactory();
 var itmParameters = new List<ProjectionParameter>
 {
-    new ProjectionParameter("latitude_of_origin", 31.734393611111109123611111111111),
-    new ProjectionParameter("central_meridian", 35.204516944444442572222222222222),
-    new ProjectionParameter("false_northing", 626907.390),
-    new ProjectionParameter("false_easting", 219529.584),
-    new ProjectionParameter("scale_factor", 1.0000067)
+	new ProjectionParameter("latitude_of_origin", 31.734393611111109123611111111111),
+	new ProjectionParameter("central_meridian", 35.204516944444442572222222222222),
+	new ProjectionParameter("false_northing", 626907.390),
+	new ProjectionParameter("false_easting", 219529.584),
+	new ProjectionParameter("scale_factor", 1.0000067)
 };
 
 var itmDatum = coordinateSystemFactory.CreateHorizontalDatum("Isreal 1993", DatumType.HD_Geocentric,
-    Ellipsoid.GRS80, new Wgs84ConversionInfo(-48, 55, 52, 0, 0, 0, 0));
+	Ellipsoid.GRS80, new Wgs84ConversionInfo(-24.0024, -17.1032, -17.8444, -0.33077, -1.85269, 1.66969, 5.4248));
 
 var itmGeo = coordinateSystemFactory.CreateGeographicCoordinateSystem("ITM", AngularUnit.Degrees, itmDatum,
-    PrimeMeridian.Greenwich, new AxisInfo("East", AxisOrientationEnum.East), new AxisInfo("North", AxisOrientationEnum.North));
+	PrimeMeridian.Greenwich, new AxisInfo("East", AxisOrientationEnum.East), new AxisInfo("North", AxisOrientationEnum.North));
 
 var itmProjection = coordinateSystemFactory.CreateProjection("Transverse_Mercator", "Transverse_Mercator", itmParameters);
 var itm = coordinateSystemFactory.CreateProjectedCoordinateSystem("ITM", itmGeo, itmProjection, LinearUnit.Metre,
-    new AxisInfo("East", AxisOrientationEnum.East), new AxisInfo("North", AxisOrientationEnum.North));
+	new AxisInfo("East", AxisOrientationEnum.East), new AxisInfo("North", AxisOrientationEnum.North));
 
 var wgs84 = ProjectedCoordinateSystem.WGS84_UTM(36, true).GeographicCoordinateSystem;
-_inverseTransform = coordinateTransformFactory.CreateFromCoordinateSystems(wgs84, itm);
-_transform = coordinateTransformFactory.CreateFromCoordinateSystems(itm, wgs84);
+var coordinateTransformFactory = new CoordinateTransformationFactory();
+var transform = coordinateTransformFactory.CreateFromCoordinateSystems(itm, wgs84).MathTransform;
 	   
 ```
 
